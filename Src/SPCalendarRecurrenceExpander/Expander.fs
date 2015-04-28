@@ -3,12 +3,13 @@
 open System
 open System.Collections.Generic
 
-type CalendarRecurrenceExpander(tzBias: int, tzDaylightBias: int) =
+type CalendarRecurrenceExpander(tzBias: int, tzDaylightBias: int, startDate: DateTime, endDate: DateTime) =
     let parseDateTime dt = dt |> string |> DateTime.Parse        
 
     let toLocalTime dt =
         (parseDateTime dt).AddMinutes(float(-tzBias - tzDaylightBias))
 
+    
     let timeZoneCorrect (a: Dictionary<string, obj>) =
         // all day events already have local EventDate and EndDate which is
         // 12:00 AM and 11.59 PM, respectively
@@ -21,12 +22,15 @@ type CalendarRecurrenceExpander(tzBias: int, tzDaylightBias: int) =
             then a.["RecurrenceID"] <- toLocalTime (a.["RecurrenceID"])
             a
 
+
     member __.Expand(appointments: ResizeArray<Dictionary<string, obj>>) =
         let tzCorrectedAppointments =
             appointments
             |> Seq.toList
             |> List.map timeZoneCorrect
             |> List.map (fun a -> Parser().Parse(a))
+           
+       
 
         let regularAppointments =
             tzCorrectedAppointments
@@ -36,6 +40,7 @@ type CalendarRecurrenceExpander(tzBias: int, tzDaylightBias: int) =
                 | ModifiedRecurreceInstance(_, _) -> false
                 | _ -> true)
 
+        
         let deletedInstancesByMasterSeriesItemId =
             tzCorrectedAppointments
             |> List.filter (fun a ->
@@ -76,5 +81,7 @@ type CalendarRecurrenceExpander(tzBias: int, tzDaylightBias: int) =
 
                 Compiler().Compile(a, deletedInstancesForAppointment, recurrenceExceptionInstancesForAppointment))
             |> Seq.concat
-
+            |> Seq.filter (fun d -> d.Start >= startDate && d.End <= endDate) 
+           
+            
         ResizeArray<_>(expandedAppointments)
