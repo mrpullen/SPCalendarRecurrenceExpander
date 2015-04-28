@@ -90,11 +90,12 @@ class Program {
         var items = calendar.GetItems(query);
         ctx.Load(items);
         ctx.ExecuteQuery();
-
+	var startDate = DateTime.Today.AddDays(-30);
+	var endDate = DateTime.Today.AddDays(30);
         var collapsedAppointments = items.ToList().Select(i => i.FieldValues).ToList();
         var expander = new CalendarRecurrenceExpander(
             tz.Information.Bias, 
-            tz.Information.DaylightBias);
+            tz.Information.DaylightBias, startDate, endDate);
         var recurrenceInstances = expander.Expand(collapsedAppointments);
 
         Func<RecurrenceInstance, Appointment> toDomainObject = (ri => {
